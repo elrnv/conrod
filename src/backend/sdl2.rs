@@ -6,6 +6,7 @@ use input;
 use sdl2::{event, video};
 use sdl2;
 use piston_input::{ControllerAxisArgs};
+use cursor;
 
 /// A function for converting a `sdl2::event::Event` to a `conrod::event::Input`.
 ///
