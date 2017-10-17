@@ -6,6 +6,7 @@ use input;
 use sdl2::{event, video};
 use sdl2;
 use piston_input::{ControllerAxisArgs};
+use cursor;
 
 /// A function for converting a `sdl2::event::Event` to a `conrod::event::Input`.
 ///
@@ -19,7 +20,7 @@ pub fn convert_event(e: event::Event, window: &video::Window) -> (Option<Input>,
 
     // The window size in points.
     let (win_w, win_h) = {
-        let (w,h) = window.drawable_size();
+        let (w,h) = window.size();
         (w as Scalar, h as Scalar)
     };
 
@@ -27,8 +28,8 @@ pub fn convert_event(e: event::Event, window: &video::Window) -> (Option<Input>,
     //
     // winit produces input events in pixels, so these positions need to be divided by the width
     // and height of the window in order to be DPI agnostic.
-    let tx = |x: f32| ((x as Scalar) - win_w / 2.0) as Scalar;
-    let ty = |y: f32| -((y as Scalar) - win_h / 2.0) as Scalar;
+    let tx = |x: f64| ((x as Scalar) - win_w / 2.0) as Scalar;
+    let ty = |y: f64| -((y as Scalar) - win_h / 2.0) as Scalar;
 
     match e {
         Event::Window { win_event, .. } =>
@@ -82,8 +83,8 @@ pub fn convert_event(e: event::Event, window: &video::Window) -> (Option<Input>,
         },
 
         Event::MouseMotion { x, y, xrel, yrel, .. } => {
-            let cursor = input::Motion::MouseCursor { x: tx(x as f32), y: ty(y as f32) };
-            let relative = input::Motion::MouseRelative { x: tx(xrel as f32), y: ty(yrel as f32) };
+            let cursor = input::Motion::MouseCursor { x: tx(x as f64), y: ty(y as f64) };
+            let relative = input::Motion::MouseRelative { x: tx(xrel as f64), y: ty(yrel as f64) };
             (Some(Input::Motion(cursor)), Some(Input::Motion(relative)))
         },
 
@@ -129,5 +130,21 @@ pub fn map_mouse(mouse_button: sdl2::mouse::MouseButton) -> input::MouseButton {
         sdl2::mouse::MouseButton::X1 => MouseButton::X1,
         sdl2::mouse::MouseButton::X2 => MouseButton::X2,
         _ => MouseButton::Unknown
+    }
+}
+
+/// Convert a given conrod mouse cursor to the corresponding sdl2 cursor type.
+pub fn convert_mouse_cursor(cursor: cursor::MouseCursor) -> sdl2::mouse::SystemCursor {
+    match cursor {
+        cursor::MouseCursor::Text => sdl2::mouse::SystemCursor::IBeam,
+        cursor::MouseCursor::VerticalText => sdl2::mouse::SystemCursor::IBeam,
+        cursor::MouseCursor::Hand => sdl2::mouse::SystemCursor::Hand,
+        cursor::MouseCursor::Grab => sdl2::mouse::SystemCursor::SizeAll,
+        cursor::MouseCursor::Grabbing => sdl2::mouse::SystemCursor::SizeAll,
+        cursor::MouseCursor::ResizeVertical => sdl2::mouse::SystemCursor::SizeNS,
+        cursor::MouseCursor::ResizeHorizontal => sdl2::mouse::SystemCursor::SizeWE,
+        cursor::MouseCursor::ResizeTopLeftBottomRight => sdl2::mouse::SystemCursor::SizeNWSE,
+        cursor::MouseCursor::ResizeTopRightBottomLeft => sdl2::mouse::SystemCursor::SizeNESW,
+        _ => sdl2::mouse::SystemCursor::Arrow,
     }
 }

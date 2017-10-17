@@ -119,7 +119,7 @@ mod feature {
                 let dims = (win_w as f32 * dpi_factor, win_h as f32 * dpi_factor);
 
                 //Clear the window
-                encoder.clear(&rtv, CLEAR_COLOR);
+                renderer.clear(&mut encoder, CLEAR_COLOR);
 
                 renderer.fill(&mut encoder,dims,primitives,&image_map);
 
@@ -171,6 +171,6 @@ mod feature {
 mod feature {
     pub fn main() {
         println!("This example requires the `winit` feature and the `gfx_rs` feature. \
-                 Try running `cargo run --release --no-default-features --features=\"winit gf_rs\" --example <example_name>`");
+                 Try running `cargo run --release --no-default-features --features=\"winit gfx_rs\" --example <example_name>`");
    }
 }

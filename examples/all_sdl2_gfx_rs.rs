@@ -18,6 +18,7 @@ fn main() {
 #[cfg(all(feature="sdl2",feature="gfx_rs"))]
 mod feature {
     extern crate gfx_window_sdl;
+    extern crate gfx_device_gl;
     extern crate find_folder;
     extern crate image;
 
@@ -60,7 +61,7 @@ mod feature {
         builder.allow_highdpi();
 
         // Initialize gfx things
-        let (window, glcontext, mut device, mut factory, rtv, _) =
+        let (window, glcontext, mut device, mut factory, rtv, ds) =
             gfx_window_sdl::init::<ColorFormat, DepthFormat>(builder)
             .expect("gfx_window_sdl::init failed!");
 
@@ -68,7 +69,13 @@ mod feature {
 
         let mut encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();
 
-        let mut renderer = conrod::backend::gfx::Renderer::new(&mut factory, &rtv, 1.0f64).unwrap();
+        let dpi_factor = {
+            let (wd,_) = window.drawable_size();
+            let (w,_) = window.size();
+            wd as f64 / w as f64
+        };
+
+        let mut renderer = conrod::backend::gfx::Renderer::new(&mut factory, &rtv, dpi_factor).unwrap();
 
         // Create Ui and Ids of widgets to instantiate
         let mut ui = conrod::UiBuilder::new([WIN_W as f64, WIN_H as f64]).theme(support::theme()).build();
@@ -121,7 +128,7 @@ mod feature {
                 let dims = (win_w as f32, win_h as f32);
 
                 //Clear the window
-                encoder.clear(&rtv, CLEAR_COLOR);
+                renderer.clear(&mut encoder, CLEAR_COLOR);
 
                 renderer.fill(&mut encoder,dims,primitives,&image_map);
 
@@ -152,6 +159,11 @@ mod feature {
                             break 'main
                         }
                     },
+                    sdl2::event::Event::Window { win_event : sdl2::event::WindowEvent::Resized(_,_), .. } => {
+                        if let Some((new_rtv, _)) = new_views(&window, &rtv, &ds) {
+                            renderer.on_resize(new_rtv);
+                        }
+                    },
                     _ => {},
                 }
             }
@@ -161,6 +173,36 @@ mod feature {
                 let mut ui = ui.set_widgets();
                 support::gui(&mut ui, &ids, &mut app);
             }
+        }
+    }
+
+    /// Update render targets. This is necessary after a window is resized.
+    fn new_views<Cf,Df>(window: &sdl2::video::Window,
+                           rtv: &gfx_core::handle::RenderTargetView<gfx_device_gl::Resources, Cf>,
+                           ds: &gfx_core::handle::DepthStencilView<gfx_device_gl::Resources, Df>)
+        -> Option<(gfx_core::handle::RenderTargetView<gfx_device_gl::Resources, Cf>,
+                   gfx_core::handle::DepthStencilView<gfx_device_gl::Resources, Df>)>
+        where Cf: gfx_core::format::RenderFormat,
+              Df: gfx_core::format::DepthFormat,
+    {
+        use gfx_core::memory::Typed;
+        use gfx_core::texture;
+
+        let old_dim = rtv.get_dimensions();
+        assert_eq!(old_dim, ds.get_dimensions());
+
+        let dim = {
+            let (w,h) = window.drawable_size();
+            let aa = window.subsystem().gl_attr().multisample_samples() as texture::NumSamples;
+            (w as texture::Size, h as texture::Size, 1, aa.into())
+        };
+
+        if old_dim != dim {
+            let (raw_rtv, raw_ds) =
+                gfx_device_gl::create_main_targets_raw(dim, Cf::get_format().0, Df::get_format().0);
+            Some((Typed::new(raw_rtv), Typed::new(raw_ds)))
+        } else {
+            None
         }
     }
 }

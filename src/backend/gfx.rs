@@ -177,9 +177,16 @@ impl<R: Resources> Renderer<R>{
             out: rtv.clone(),
         };
 
-        let pipeline = factory.create_pipeline_simple(VERTEX_SHADER,
-                                                      FRAGMENT_SHADER,
-                                                      pipe::new())?;
+        let shader_set = factory.create_shader_set(VERTEX_SHADER, FRAGMENT_SHADER).unwrap();
+
+        let pipeline = factory.create_pipeline_state(
+            &shader_set,
+            gfx::Primitive::TriangleList,
+            gfx::state::Rasterizer {
+                samples: Some(gfx::state::MultiSample {}),
+                ..gfx::state::Rasterizer::new_fill()
+            },
+            pipe::new())?;
 
         let (glyph_cache, cache_tex, cache_tex_view) = {
 
@@ -579,12 +586,19 @@ impl<R: Resources> Renderer<R>{
         }
     }
 
-    /// Call this method when a window has been resized. This ensures that conrod primitives are
+    /// Call this routine when a window has been resized. This ensures that conrod primitives are
     /// drawn properly with the `draw` call.
     pub fn on_resize(&mut self, rtv: RenderTargetView<R, ColorFormat>) {
         let (width,height,_depth,_samples) = rtv.get_dimensions();
-        self.data.out = rtv;
+        self.data.out = rtv.clone();
         self.data.scissor = gfx::Rect{x:0,y:0,w:width,h:height};
+    }
+
+    /// Call this routine to clear the render target.
+    pub fn clear<C>(&self, encoder: &mut gfx::Encoder<R,C>, clear_color: [f32; 4])
+        where C: gfx::CommandBuffer<R>,
+    {
+        encoder.clear(&self.data.out, clear_color);
     }
 }
 
