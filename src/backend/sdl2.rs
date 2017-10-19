@@ -1,28 +1,23 @@
-//! A function for converting a `winit::Event` to a `conrod::event::Input`.
+//! A function for converting a `sdl2::event::Event` to a `conrod::event::Input`.
 
 use Scalar;
 use event::Input;
 use input;
-use sdl2::{event, video};
+use sdl2::{event};
 use sdl2;
 use piston_input::{ControllerAxisArgs};
 use cursor;
 
 /// A function for converting a `sdl2::event::Event` to a `conrod::event::Input`.
 ///
-/// This can be useful for single-window applications.
+/// This can be useful for single-window applications. Note that win_w and win_h should be the dpi
+/// agnostic values (i.e. pass window.size() values and NOT window.drawable_size())
 ///
 /// NOTE: The sdl2 MouseMotion event is a combination of a MouseCursor and MouseRelative conrod
 /// events. Thus we may sometimes return two events in place of one, hence the tuple return type
-pub fn convert_event(e: event::Event, window: &video::Window) -> (Option<Input>, Option<Input>)
+pub fn convert_event(e: event::Event, win_w: Scalar, win_h: Scalar) -> (Option<Input>, Option<Input>)
 {
     use sdl2::event::{Event, WindowEvent};
-
-    // The window size in points.
-    let (win_w, win_h) = {
-        let (w,h) = window.size();
-        (w as Scalar, h as Scalar)
-    };
 
     // Translate the coordinates from top-left-origin-with-y-down to centre-origin-with-y-up.
     //
