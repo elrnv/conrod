@@ -122,11 +122,12 @@ mod feature {
             if let Some(primitives) = ui.draw_if_changed() {
                 let (win_w, win_h) = window.drawable_size();
                 let dims = (win_w as f32, win_h as f32);
+                let dpi_factor = win_w / window.size().0;
 
                 //Clear the window
                 renderer.clear(&mut encoder, CLEAR_COLOR);
 
-                renderer.fill(&mut encoder,dims,primitives,&image_map);
+                renderer.fill(&mut encoder,dims, dpi_factor as f64, primitives, &image_map);
 
                 renderer.draw(&mut factory,&mut encoder,&image_map);
 
