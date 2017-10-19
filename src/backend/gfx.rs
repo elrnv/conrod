@@ -225,15 +225,33 @@ impl<R: Resources> Renderer<R>{
     }
 
     /// Fill the inner vertex and command buffers by translating the given `primitives`.
+    #[inline]
     pub fn fill<P, C>(&mut self,
                       encoder: &mut gfx::Encoder<R,C>,
                       dims: (f32,f32),
                       dpi_factor: f64,
-                      mut primitives: P,
+                      primitives: P,
                       image_map: &image::Map<(gfx::handle::ShaderResourceView<R, [f32; 4]>,
-                                              (u32,u32))>)
+                                                        (u32,u32))>)
         where P: render::PrimitiveWalker,
               C: gfx::CommandBuffer<R>,
+    {
+        self.fill_custom(encoder, dims, dpi_factor, primitives, image_map, |_|{});
+    }
+
+    /// Fill the inner vertex and command buffers by translating the given `primitives`.
+    /// This version of fill allows the user to handle rendering of custom widgets.
+    pub fn fill_custom<P, C, F>(&mut self,
+                                encoder: &mut gfx::Encoder<R,C>,
+                                dims: (f32,f32),
+                                dpi_factor: f64,
+                                mut primitives: P,
+                                image_map: &image::Map<(gfx::handle::ShaderResourceView<R, [f32; 4]>,
+                                                        (u32,u32))>,
+                                custom_widget_handler: F)
+        where P: render::PrimitiveWalker,
+              C: gfx::CommandBuffer<R>,
+              F: Fn(render::Primitive),
     {
         let Renderer { ref mut commands, ref mut vertices, ref mut glyph_cache, ref mut cache_tex, .. } = *self;
 
@@ -294,7 +312,7 @@ impl<R: Resources> Renderer<R>{
 
         // Draw each primitive in order of depth.
         while let Some(primitive) = primitives.next_primitive() {
-            let render::Primitive { kind, scizzor, rect, .. } = primitive;
+            let render::Primitive { id, kind, scizzor, rect } = primitive;
 
             // Check for a `Scizzor` command.
             let new_scizzor = rect_to_gfx_rect(scizzor);
@@ -524,8 +542,10 @@ impl<R: Resources> Renderer<R>{
                     push_v(r, t, [uv_r, uv_t]);
                 },
 
-                // We have no special case widgets to handle.
-                render::PrimitiveKind::Other(_) => (),
+                // Handle custom widgets
+                render::PrimitiveKind::Other(_) => {
+                    custom_widget_handler( render::Primitive { id, kind, scizzor, rect } );
+                },
             }
 
         }
